@@ -14,6 +14,9 @@ builder.Services.AddDbContext<ServiceSchedulerDbContext>(options =>
 builder.Services.AddScoped<ResourceAssignmentService>();
 builder.Services.AddScoped<AppointmentService>();
 
+// Add health checks
+builder.Services.AddHealthChecks();
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -31,6 +34,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+// Map health check endpoints
+app.MapHealthChecks("/health");
 
 app.MapControllers();
 

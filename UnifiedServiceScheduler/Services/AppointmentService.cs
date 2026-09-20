@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Data;
 using UnifiedServiceScheduler.Data;
 using UnifiedServiceScheduler.Data.Entities;
@@ -46,11 +47,13 @@ public class AppointmentService
 {
     private readonly ServiceSchedulerDbContext _context;
     private readonly ResourceAssignmentService _resourceAssignmentService;
+    private readonly ILogger<AppointmentService> _logger;
 
-    public AppointmentService(ServiceSchedulerDbContext context, ResourceAssignmentService resourceAssignmentService)
+    public AppointmentService(ServiceSchedulerDbContext context, ResourceAssignmentService resourceAssignmentService, ILogger<AppointmentService> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _resourceAssignmentService = resourceAssignmentService ?? throw new ArgumentNullException(nameof(resourceAssignmentService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -63,9 +66,13 @@ public class AppointmentService
     public async Task<CreateAppointmentResult> CreateAppointmentAsync(CreateAppointmentRequest request, 
         CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("Starting appointment creation for CustomerId: {CustomerId}, ServiceTypeId: {ServiceTypeId}, DealershipId: {DealershipId}, StartTime: {StartTime}",
+            request?.CustomerId, request?.ServiceTypeId, request?.DealershipId, request?.StartTime);
+
         // Validate input
         if (request == null)
         {
+            _logger.LogWarning("Appointment creation failed: Request is null");
             return new CreateAppointmentResult
             {
                 Success = false,
@@ -76,6 +83,8 @@ public class AppointmentService
 
         if (string.IsNullOrWhiteSpace(request.VehicleVin) || request.VehicleVin.Length > 17)
         {
+            _logger.LogWarning("Appointment creation failed: Invalid VIN. CustomerId: {CustomerId}, VIN: {VehicleVin}",
+                request.CustomerId, request.VehicleVin);
             return new CreateAppointmentResult
             {
                 Success = false,
@@ -87,12 +96,16 @@ public class AppointmentService
         // Begin PostgreSQL READ COMMITTED transaction
         using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
         
+        _logger.LogDebug("Started database transaction for appointment creation. CustomerId: {CustomerId}", request.CustomerId);
+
         // Step 1: Calculate appointment end time from service type duration
         var serviceType = await _context.ServiceTypes
             .FirstOrDefaultAsync(st => st.ServiceTypeId == request.ServiceTypeId, cancellationToken);
         
         if (serviceType == null)
         {
+            _logger.LogWarning("Appointment creation failed: Service type not found. ServiceTypeId: {ServiceTypeId}, CustomerId: {CustomerId}",
+                request.ServiceTypeId, request.CustomerId);
             return new CreateAppointmentResult
             {
                 Success = false,
@@ -102,6 +115,8 @@ public class AppointmentService
         }
 
         var endTime = request.StartTime.Add(serviceType.Duration);
+        _logger.LogDebug("Calculated appointment duration. ServiceType: {ServiceTypeName}, Duration: {Duration}, EndTime: {EndTime}",
+            serviceType.Name, serviceType.Duration, endTime);
 
         // Step 2: Call ResourceAssignmentService within this transaction
         // The ResourceAssignmentService will handle resource locking using SELECT FOR UPDATE
@@ -114,6 +129,8 @@ public class AppointmentService
 
         if (!resourceAssignmentResult.Success)
         {
+            _logger.LogWarning("Appointment creation failed: Resource assignment failed. CustomerId: {CustomerId}, DealershipId: {DealershipId}, Error: {ErrorMessage}",
+                request.CustomerId, request.DealershipId, resourceAssignmentResult.ErrorMessage);
             return new CreateAppointmentResult
             {
                 Success = false,
@@ -121,6 +138,9 @@ public class AppointmentService
                 ErrorMessage = $"Resource assignment failed: {resourceAssignmentResult.ErrorMessage}"
             };
         }
+
+        _logger.LogInformation("Resources successfully assigned. ServiceBayId: {ServiceBayId}, TechnicianId: {TechnicianId}, CustomerId: {CustomerId}",
+            resourceAssignmentResult.AssignedServiceBay!.ServiceBayId, resourceAssignmentResult.AssignedTechnician!.TechnicianId, request.CustomerId);
 
         // Step 3: Create the Appointment entity only after resources are successfully assigned
         var appointment = new Appointment
@@ -146,6 +166,9 @@ public class AppointmentService
         // Step 5: Commit the transaction (releases all locks atomically)
         await transaction.CommitAsync(cancellationToken);
 
+        _logger.LogInformation("Appointment successfully created. AppointmentId: {AppointmentId}, CustomerId: {CustomerId}, ServiceBayId: {ServiceBayId}, TechnicianId: {TechnicianId}, StartTime: {StartTime}, EndTime: {EndTime}",
+            appointment.AppointmentId, appointment.CustomerId, appointment.ServiceBayId, appointment.TechnicianId, appointment.StartTime, appointment.EndTime);
+
         return new CreateAppointmentResult
         {
             Success = true,
@@ -161,7 +184,21 @@ public class AppointmentService
     /// <returns>The appointment if found, null otherwise</returns>
     public async Task<Appointment?> GetAppointmentByIdAsync(int appointmentId, CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
+        _logger.LogDebug("Retrieving appointment by ID: {AppointmentId}", appointmentId);
+        
+        var appointment = await _context.Appointments
             .FirstOrDefaultAsync(a => a.AppointmentId == appointmentId, cancellationToken);
+            
+        if (appointment == null)
+        {
+            _logger.LogInformation("Appointment not found: {AppointmentId}", appointmentId);
+        }
+        else
+        {
+            _logger.LogDebug("Appointment retrieved successfully: {AppointmentId}, CustomerId: {CustomerId}", 
+                appointmentId, appointment.CustomerId);
+        }
+        
+        return appointment;
     }
 }
