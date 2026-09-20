@@ -7,6 +7,13 @@
         "chatSessionId": "sess_c6fd77f8-8764-4d82-87dc-babb8e58457d",
         "timestamp": 1789864904715
       }
+    ],
+    "7.1 Write PostgreSQL integration tests with Testcontainers": [
+      {
+        "executionId": "0a1e57e3-77f4-4182-bd9c-b24fb1344c48",
+        "chatSessionId": "sess_09e4a186-ccf1-4258-9831-d28096aedebf",
+        "timestamp": 1789887903532
+      }
     ]
   }
 }
