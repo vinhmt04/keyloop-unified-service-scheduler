@@ -103,21 +103,50 @@ This implementation plan builds the Unified Service Scheduler as a C# ASP.NET Co
     - _Requirements: 3.3, 3.4_
 
 - [ ] 8. Final integration and verification
-  - [ ] 8.1 Configure complete application pipeline
-    - Wire all services together with dependency injection
-    - Configure database connection and Entity Framework context
-    - Add proper exception handling middleware
+  - [ ] 8.1 Verify application pipeline and dependency injection
+    - Verify all required application services are registered with dependency injection
+    - Verify database connection and Entity Framework context configuration
+    - Make only the minimum application changes needed to complete the existing booking flow
     - _Requirements: All requirements_
 
-  - [ ] 8.2 Run end-to-end verification tests
-    - Test complete booking workflow via HTTP API
-    - Verify resource conflicts are properly detected and reported
-    - Test appointment retrieval with all associated data
-    - Ensure all integration tests pass
+  - [ ] 8.2 Verify booking flow manually through HTTP API
+    - Verify a successful appointment booking through the HTTP API
+    - Verify resource conflicts are detected and reported through the HTTP API
+    - Verify appointment retrieval returns the persisted appointment and assigned resources
+    - Use the existing Swagger/OpenAPI interface or another lightweight HTTP client
     - _Requirements: All requirements_
 
-- [ ] 9. Final checkpoint - Complete system verification
-  - Ensure all tests pass, ask the user if questions arise.
+  - [ ] 8.3 Run final automated test suite
+    - Run the complete existing automated test suite
+    - Confirm PostgreSQL integration and concurrency tests pass
+    - Fix only genuine correctness issues discovered by final verification
+    - _Requirements: All requirements_
+
+- [ ] 9. Complete submission documentation
+  - [ ] 9.1 Create README with build, run, and test instructions
+    - Document prerequisites and local setup
+    - Document how to build and run the application
+    - Document how to run the automated tests
+    - Document how to access and use Swagger/OpenAPI for the booking flow
+    - _Requirements: Submission deliverable_
+
+  - [ ] 9.2 Create AI Collaboration Narrative
+    - Summarize how GenAI was used across requirements, design, implementation, testing, and verification
+    - Include concrete examples where AI output was challenged, corrected, narrowed, or rejected
+    - Explain the human verification and engineering judgment applied to AI-generated work
+    - _Requirements: Submission deliverable_
+
+  - [ ] 9.3 Review design and documentation for consistency
+    - Verify README, System Design Document, implementation, and tests describe the same implemented behavior
+    - Remove stale or unsupported claims from final documentation
+    - Confirm submission artifacts are concise and complete
+    - _Requirements: Submission deliverable_
+
+- [ ] 10. Final checkpoint - Complete system and submission verification
+  - Ensure the application builds and runs
+  - Ensure all required automated tests pass
+  - Ensure the manual HTTP booking flow has been verified
+  - Ensure all required submission documentation is complete.
 
 ## Notes
 
@@ -144,7 +173,10 @@ This implementation plan builds the Unified Service Scheduler as a C# ASP.NET Co
     { "id": 8, "tasks": ["6.1", "6.2"] },
     { "id": 9, "tasks": ["7.1", "7.2"] },
     { "id": 10, "tasks": ["8.1"] },
-    { "id": 11, "tasks": ["8.2"] }
+    { "id": 11, "tasks": ["8.2"] },
+    { "id": 12, "tasks": ["8.3"] },
+    { "id": 13, "tasks": ["9.1", "9.2"] },
+    { "id": 14, "tasks": ["9.3"] }
   ]
 }
 ```
