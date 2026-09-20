@@ -1,0 +1,5 @@
+@UnifiedServiceScheduler_HostAddress = http://localhost:5246
+
+# API endpoints will be added here as they are developed
+
+###
