@@ -61,3 +61,11 @@ description: Engineering guardrails and principles for Unified Service Scheduler
 - **Appropriate transaction boundaries** - Ensure atomic operations where required by business logic
 - **Concurrent access safety** - Prevent data corruption under simultaneous access
 - **Reliability strategy decisions** - Recovery procedures and fault tolerance mechanisms should be evaluated during system design
+
+## AI-Assisted Implementation
+
+- Follow the approved requirements, design, and current task scope. Do not introduce unrequested business rules, architecture, or dependencies.
+- Make the smallest coherent change required by the current task.
+- Inspect the actual workspace files after making changes; do not rely solely on sub-agent completion reports.
+- Before running build or tests, present significant implementation changes for human review.
+- After human approval, run the relevant verification and report the actual results.
