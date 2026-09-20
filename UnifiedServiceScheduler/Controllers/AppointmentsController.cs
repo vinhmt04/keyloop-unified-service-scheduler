@@ -44,9 +44,9 @@ public class AppointmentsController : ControllerBase
         if (result.Success)
         {
             // Map successful creation -> 201 Created
-            return CreatedAtAction(
-                nameof(CreateAppointment), 
-                new { id = result.CreatedAppointment!.AppointmentId }, 
+          return CreatedAtAction(
+            nameof(GetAppointment),
+            new { appointmentId = result.CreatedAppointment!.AppointmentId },
                 new
                 {
                     AppointmentId = result.CreatedAppointment.AppointmentId,
@@ -70,5 +70,36 @@ public class AppointmentsController : ControllerBase
             AppointmentCreationErrorType.ResourceConflict => Conflict(new { Error = result.ErrorMessage }),
             _ => BadRequest(new { Error = result.ErrorMessage })
         };
+    }
+
+    /// <summary>
+    /// Retrieves an appointment by ID
+    /// </summary>
+    /// <param name="appointmentId">The appointment ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Appointment details if found</returns>
+    [HttpGet("{appointmentId}")]
+    public async Task<IActionResult> GetAppointment(int appointmentId, CancellationToken cancellationToken = default)
+    {
+        var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId, cancellationToken);
+
+        if (appointment == null)
+        {
+            return NotFound(new { Error = $"Appointment with ID {appointmentId} not found" });
+        }
+
+        return Ok(new
+        {
+            AppointmentId = appointment.AppointmentId,
+            CustomerId = appointment.CustomerId,
+            VehicleVin = appointment.VehicleVin,
+            ServiceTypeId = appointment.ServiceTypeId,
+            DealershipId = appointment.DealershipId,
+            StartTime = appointment.StartTime,
+            EndTime = appointment.EndTime,
+            ServiceBayId = appointment.ServiceBayId,
+            TechnicianId = appointment.TechnicianId,
+            CreatedAt = appointment.CreatedAt
+        });
     }
 }

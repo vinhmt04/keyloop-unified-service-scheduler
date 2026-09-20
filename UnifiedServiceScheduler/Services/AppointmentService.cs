@@ -152,4 +152,16 @@ public class AppointmentService
             CreatedAppointment = appointment
         };
     }
+
+    /// <summary>
+    /// Retrieves an appointment by its ID
+    /// </summary>
+    /// <param name="appointmentId">The appointment ID to retrieve</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The appointment if found, null otherwise</returns>
+    public async Task<Appointment?> GetAppointmentByIdAsync(int appointmentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Appointments
+            .FirstOrDefaultAsync(a => a.AppointmentId == appointmentId, cancellationToken);
+    }
 }
