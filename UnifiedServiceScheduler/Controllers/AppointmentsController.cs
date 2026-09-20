@@ -24,6 +24,9 @@ public class AppointmentsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created appointment details</returns>
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateAppointment([FromBody] CreateAppointmentRequest request, 
         CancellationToken cancellationToken = default)
     {
@@ -79,6 +82,8 @@ public class AppointmentsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Appointment details if found</returns>
     [HttpGet("{appointmentId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppointment(int appointmentId, CancellationToken cancellationToken = default)
     {
         var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId, cancellationToken);

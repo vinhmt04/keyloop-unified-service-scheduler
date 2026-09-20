@@ -49,9 +49,9 @@ All appointment operations occur within database transactions to ensure:
 
 **POST /api/appointments**
 - **Purpose**: Request new service appointment
-- **Input**: Customer ID, vehicle details, service type, dealership, desired time
-- **Output**: Confirmed appointment with assigned resources, or availability conflict error
-- **Validation**: Request completeness, service type existence, dealership existence
+- **Input**: Customer ID, vehicle VIN, service type, dealership, and desired start time
+- **Output**: Confirmed appointment with assigned resources, or a validation/resource conflict response
+- **Validation**: Request validity and service type existence
 
 **GET /api/appointments/{appointmentId}**
 - **Purpose**: Retrieve appointment details
@@ -65,13 +65,13 @@ All appointment operations occur within database transactions to ensure:
 - Manages transactional boundary for booking operations
 
 **AvailabilityService**
-- Validates service bay availability for time slot
+- Validates service bay availability for a time slot
 - Validates technician availability and qualification match
-- Implements resource locking strategy during availability checks
 
 **ResourceAssignmentService**
-- Selects specific service bay and technician for confirmed appointments
-- Ensures resource assignments are recorded atomically
+- Selects a specific service bay and qualified technician
+- Locks the selected service bay first and technician second using PostgreSQL row locks
+- Rechecks availability while the locks are held before returning the assignment
 
 ### External Dependencies
 
@@ -200,8 +200,8 @@ BEGIN TRANSACTION (READ COMMITTED)
 - **Benefits**: Row-level locking, reliable READ COMMITTED isolation, JSON support for flexible data
 
 **Entity Framework Core**
-- **Rationale**: Type-safe database operations, strong migration support, excellent testability with InMemory provider
-- **Benefits**: Reduces SQL injection risks, simplifies transaction management, enables clean unit testing
+- **Rationale**: Type-safe database operations, strong PostgreSQL integration, and migration support
+- **Benefits**: Simplifies persistence and transaction management while allowing database behavior to be verified against real PostgreSQL through Testcontainers
 
 ### Development and Testing
 
@@ -239,130 +239,52 @@ For any appointment creation attempt, either both service bay and technician are
 
 ## Error Handling
 
-### Validation Errors (400 Bad Request)
+### Expected Request and Business Outcomes
 
-**Request Completeness Validation:**
-- Missing required fields (customerId, vehicleVin, serviceTypeId, dealershipId, desiredTime)
-- Invalid data formats (non-numeric IDs, invalid datetime formats)
-- Invalid references (non-existent serviceTypeId, non-existent dealershipId)
+- `400 Bad Request` for invalid booking requests or a service type that does not exist.
+- `409 Conflict` when no suitable service bay or qualified technician is available for the requested interval.
+- `201 Created` when the appointment is successfully persisted with both resource assignments.
+- `404 Not Found` when the requested appointment does not exist.
 
-**Business Rule Validation:**
-- Service type not offered at requested dealership
+Expected booking failures are represented by typed service-layer error classifications so the API does not depend on parsing error-message text.
 
-### Resource Conflict Errors (409 Conflict)
+### Technical Failures
 
-**Availability Conflicts:**
-- No service bay available for requested time slot
-- No qualified technician available for requested time slot
-- Combined resource unavailability (both constraints failed)
-
-**Error Response Format:**
-```json
-{
-  "error": "ResourceUnavailable",
-  "message": "No qualified technician available for requested time slot",
-  "details": {
-    "serviceType": "Oil Change",
-    "requestedTime": "2024-01-15T10:00:00Z",
-    "availableSlots": []
-  }
-}
-```
-
-### System Errors (500 Internal Server Error)
-
-**Database Failures:**
-- Connection timeouts during resource locking
-- Transaction deadlocks (should be rare due to consistent lock ordering)
-- Constraint violation errors (data integrity issues)
-
-**Resilience Patterns:**
-- Transaction rollback on any failure during booking process
-- Structured error logging for debugging and monitoring
+Unexpected database, locking, or infrastructure exceptions are not converted into normal booking outcomes by the service layer. The active transaction is disposed/rolled back when the booking cannot complete, and technical failures propagate to the API boundary for framework-level handling and logging.
 
 ## Testing Strategy
 
-### Integration Testing Focus
+### PostgreSQL Integration Testing
 
-**PostgreSQL Integration Tests**
-- Test actual database concurrency behavior with Testcontainers
-- Verify transaction isolation and locking mechanisms work correctly
-- Validate constraint enforcement and data integrity
+The automated suite uses xUnit with PostgreSQL Testcontainers so availability queries, transactions, row locking, and persistence are exercised against the same database engine used by the application.
 
-**Business Logic Testing**
-- Test appointment booking workflow with various scenarios
-- Verify resource availability calculations with overlapping appointments
-- Test error conditions and edge cases (no resources, qualification mismatches)
+The suite covers:
+- Complete appointment booking and persistence workflows
+- Service bay and technician availability, including half-open interval boundaries
+- Technician qualification matching
+- Expected booking failures such as unavailable resources and missing service types
+- Transactional resource assignment behavior
 
-**ASP.NET Core Integration**
-- Test complete HTTP request/response cycles
-- Verify request validation and error response formats
-- Test API contract adherence with OpenAPI specifications
+### Concurrency Testing
 
-### Unit Testing Approach
+Focused concurrent booking tests verify the persistence invariant rather than relying on timing assumptions:
+- Concurrent requests for the same time slot cannot persist overlapping appointments that share a service bay or technician
+- Overlapping requests preserve resource exclusivity
+- Non-overlapping requests can succeed concurrently
 
-**Service Layer Tests**
-- Mock database dependencies to test business logic in isolation
-- Focus on resource selection algorithms and validation rules
-- Test error handling paths and edge conditions
-
-**Data Access Layer Tests**
-- Use Entity Framework InMemory provider for repository pattern testing
-- Verify query correctness and data mapping
-- Test transaction boundary management
-
-### Test Scenarios
-
-**Concurrency Test Cases**
-- Multiple concurrent requests for same time slot (expect one success, others fail)
-- Concurrent requests for different non-overlapping slots (expect all succeed)
-- Resource lock timeout scenarios
-
-**Business Logic Test Cases**
-- Valid appointment request with available resources (expect success)
-- Request with no available service bays (expect conflict error)
-- Request with no qualified technicians (expect conflict error)
-- Request with invalid service type or dealership (expect validation error)
+The HTTP booking flow is additionally verified manually through Swagger against the local PostgreSQL database. Automated HTTP end-to-end tests and EF Core InMemory tests are intentionally not part of the final suite.
 
 ## Observability
 
-### Structured Logging
+### Implemented
 
-**Key Log Events:**
-- Appointment request received (with customerId, serviceType, dealership, requestedTime)
-- Resource availability check initiated (with time slot and resource counts)
-- Resource locking attempted (with resource IDs and lock success/failure)
-- Appointment confirmed (with appointmentId and assigned resources)
-- Booking conflicts detected (with conflict reasons and available alternatives)
+- Structured application logging is used for key booking operations and outcomes.
+- ASP.NET Core logging provides contextual properties that can be consumed by the configured logging provider.
+- A lightweight `/health` endpoint reports basic application health. It does not currently perform a database readiness check.
 
-**Log Format Example:**
-```json
-{
-  "timestamp": "2024-01-15T10:30:00Z",
-  "level": "INFO",
-  "event": "AppointmentConfirmed",
-  "appointmentId": 12345,
-  "customerId": 67890,
-  "serviceType": "Oil Change",
-  "dealershipId": 42,
-  "serviceBayId": 101,
-  "technicianId": 201,
-  "startTime": "2024-01-16T09:00:00Z",
-  "endTime": "2024-01-16T10:00:00Z"
-}
-```
+### Future Operational Considerations
 
-### Key Metrics
-
-**Business Metrics:**
-- Appointment confirmation rate (successful bookings / total requests)
-- Resource utilization rates (service bay and technician occupancy)
-- Average booking response time
-
-**Technical Metrics:**
-- Database transaction duration and success rate
-- Concurrent request handling capacity
-- Resource lock contention frequency
+For a production deployment, useful additions would include metrics such as booking success/conflict rate, response time, resource utilization, transaction duration, and lock contention. Database readiness checks and distributed tracing could also be added if operational requirements justify them. These are design considerations, not features implemented in this assessment.
 
 
 ## GenAI Design-Phase Collaboration
