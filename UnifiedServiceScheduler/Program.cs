@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using UnifiedServiceScheduler.Data;
 using UnifiedServiceScheduler.Services;
 
@@ -10,7 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ServiceSchedulerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register services
+// Register services in dependency order
+builder.Services.AddScoped<TimeIntervalService>();
+builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<ResourceAssignmentService>();
 builder.Services.AddScoped<AppointmentService>();
 
