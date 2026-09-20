@@ -65,7 +65,8 @@ description: Engineering guardrails and principles for Unified Service Scheduler
 ## AI-Assisted Implementation
 
 - Follow the approved requirements, design, and current task scope. Do not introduce unrequested business rules, architecture, or dependencies.
+- Inspect the actual workspace before making changes. Do not rely solely on prior agent or sub-agent reports.
 - Make the smallest coherent change required by the current task.
-- Inspect the actual workspace files after making changes; do not rely solely on sub-agent completion reports.
-- Before running build or tests, present significant implementation changes for human review.
+- Stop and present significant implementation changes for human review BEFORE running builds, tests, migrations against a database, or starting the application.
 - After human approval, run the relevant verification and report the actual results.
+- Resolve all pending Kiro change reviews before starting the next task. Do not assume a Git commit resolves Kiro's pending review state.
