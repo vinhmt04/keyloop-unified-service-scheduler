@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UnifiedServiceScheduler.Data;
+using UnifiedServiceScheduler.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add database context
 builder.Services.AddDbContext<ServiceSchedulerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register services
+builder.Services.AddScoped<ResourceAssignmentService>();
+builder.Services.AddScoped<AppointmentService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

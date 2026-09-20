@@ -18,12 +18,23 @@ public class CreateAppointmentRequest
 }
 
 /// <summary>
+/// Types of appointment creation failures
+/// </summary>
+public enum AppointmentCreationErrorType
+{
+    ValidationFailure,
+    ResourceConflict,
+    ServiceTypeNotFound
+}
+
+/// <summary>
 /// Result of appointment creation operation
 /// </summary>
 public class CreateAppointmentResult
 {
     public bool Success { get; set; }
     public Appointment? CreatedAppointment { get; set; }
+    public AppointmentCreationErrorType? ErrorType { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
 }
 
@@ -58,6 +69,7 @@ public class AppointmentService
             return new CreateAppointmentResult
             {
                 Success = false,
+                ErrorType = AppointmentCreationErrorType.ValidationFailure,
                 ErrorMessage = "Request cannot be null"
             };
         }
@@ -67,6 +79,7 @@ public class AppointmentService
             return new CreateAppointmentResult
             {
                 Success = false,
+                ErrorType = AppointmentCreationErrorType.ValidationFailure,
                 ErrorMessage = "Vehicle VIN must be provided and cannot exceed 17 characters"
             };
         }
@@ -83,6 +96,7 @@ public class AppointmentService
             return new CreateAppointmentResult
             {
                 Success = false,
+                ErrorType = AppointmentCreationErrorType.ServiceTypeNotFound,
                 ErrorMessage = $"Service type with ID {request.ServiceTypeId} not found"
             };
         }
@@ -103,6 +117,7 @@ public class AppointmentService
             return new CreateAppointmentResult
             {
                 Success = false,
+                ErrorType = AppointmentCreationErrorType.ResourceConflict,
                 ErrorMessage = $"Resource assignment failed: {resourceAssignmentResult.ErrorMessage}"
             };
         }
