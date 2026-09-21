@@ -2,7 +2,7 @@
 
 A .NET 8 ASP.NET Core Web API for scheduling automotive service appointments.
 
-The scheduler checks the availability of both a service bay and a qualified technician for the requested time period, then creates the appointment transactionally to prevent resource conflicts and double-booking.
+The scheduler calculates the appointment end time from the service type duration, checks the availability of both a service bay and a qualified technician for the entire requested service interval, and creates the appointment transactionally to prevent resource conflicts and double-booking.
 
 ## Prerequisites
 

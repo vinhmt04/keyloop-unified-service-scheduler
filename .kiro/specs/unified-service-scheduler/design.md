@@ -182,10 +182,11 @@ BEGIN TRANSACTION (READ COMMITTED)
 ```
 
 **Concurrency Behavior:**
-- Concurrent requests for same resources will serialize at step 2 (resource locking)
-- First transaction to acquire locks will succeed if resources remain available
-- Subsequent transactions will find resources unavailable during step 3 recheck
-- Failed transactions rollback cleanly without data corruption
+- Requests that select the same resource rows serialize when acquiring the row locks in step 2.
+- After acquiring the locks, each request rechecks availability before an appointment can be persisted.
+- If a selected resource became unavailable while the request was waiting for a lock, that request fails with a resource conflict rather than retrying another candidate.
+- The correctness guarantee is resource exclusivity: overlapping appointments cannot be persisted with the same service bay or technician.
+- Failed transactions roll back without persisting a partial appointment.
 
 ## Technology Stack
 

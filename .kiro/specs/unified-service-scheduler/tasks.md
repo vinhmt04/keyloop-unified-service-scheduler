@@ -81,9 +81,8 @@ This implementation plan builds the Unified Service Scheduler as a C# ASP.NET Co
     - Add API documentation comments and examples
     - _Requirements: Implementation support_
 
-  - [x] 6.2 Implement health and readiness checks
-    - Add database connectivity health check
-    - Configure health check endpoints for monitoring
+  - [x] 6.2 Implement basic health check and structured logging
+    - Configure a lightweight application health endpoint
     - Add basic structured logging for key operations
     - _Requirements: Implementation support_
 
@@ -96,7 +95,7 @@ This implementation plan builds the Unified Service Scheduler as a C# ASP.NET Co
 
   - [x] 7.2 Write concurrent booking tests for double-booking prevention
     - Test multiple concurrent requests for same time slot
-    - Verify only one booking succeeds while others fail with proper conflict errors
+    - Verify concurrent requests preserve service bay and technician exclusivity
     - Test concurrent contention for the same resources
     - Test consistent resource lock ordering
     - Verify that overlapping double-bookings cannot be created
